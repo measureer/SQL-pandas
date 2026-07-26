@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL × Pandas 对照练习</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- CodeMirror 5 (CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/sql/sql.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
+</head>
+<body>
+  <header id="topbar">
+    <div class="brand">SQL × Pandas <span class="brand-sub">对照练习</span></div>
+    <div id="dashboard" class="dashboard"></div>
+    <div class="topbar-actions">
+      <button id="btn-export" class="btn btn-ghost" title="导出进度与笔记为 JSON">导出</button>
+      <button id="btn-import" class="btn btn-ghost" title="从 JSON 恢复进度与笔记">导入</button>
+      <input type="file" id="import-file" accept=".json" hidden>
+    </div>
+  </header>
+
+  <main id="layout">
+    <!-- 左栏：题目列表 -->
+    <aside id="sidebar">
+      <div class="sidebar-tools">
+        <input type="search" id="search" placeholder="搜索题目 / 知识点…">
+        <div class="filters">
+          <select id="filter-level">
+            <option value="">全部等级</option>
+            <option value="beginner">入门</option>
+            <option value="intermediate">进阶</option>
+            <option value="advanced">精通</option>
+          </select>
+          <select id="filter-status">
+            <option value="">全部状态</option>
+            <option value="done">已完成</option>
+            <option value="undone">未完成</option>
+            <option value="starred">已收藏</option>
+          </select>
+        </div>
+      </div>
+      <nav id="exercise-list"></nav>
+    </aside>
+
+    <!-- 中栏：题目 + 编辑器 + 结果 -->
+    <section id="workspace">
+      <div id="exercise-header">
+        <div class="exercise-title-row">
+          <h2 id="exercise-title"></h2>
+          <button id="btn-star" class="btn btn-ghost star" title="收藏 / 错题标记">☆</button>
+        </div>
+        <div id="exercise-meta" class="exercise-meta"></div>
+        <div id="exercise-desc" class="exercise-desc"></div>
+      </div>
+
+      <div id="editor-panel">
+        <div class="tabs">
+          <button class="tab active" data-tab="sql">SQL</button>
+          <button class="tab" data-tab="pandas">pandas</button>
+          <span id="engine-status" class="engine-status"></span>
+          <span class="tabs-spacer"></span>
+          <button id="btn-run" class="btn btn-primary">▶ 运行</button>
+          <button id="btn-solution" class="btn">查看答案</button>
+          <button id="btn-reset" class="btn btn-ghost">重置代码</button>
+        </div>
+        <div id="editor-wrap">
+          <textarea id="editor-sql"></textarea>
+          <textarea id="editor-pandas" style="display:none"></textarea>
+        </div>
+      </div>
+
+      <div id="result-panel">
+        <div id="judge-banner" class="judge-banner hidden"></div>
+        <div id="result-tables" class="result-tables">
+          <div class="result-box">
+            <h3>你的结果</h3>
+            <div id="actual-table" class="table-wrap"></div>
+          </div>
+          <div class="result-box">
+            <h3>期望结果</h3>
+            <div id="expected-table" class="table-wrap"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右栏：数据说明 + 解析 + 笔记 -->
+    <aside id="rightbar">
+      <div class="rightbar-section">
+        <h3>数据集 Schema</h3>
+        <div id="schema-view" class="schema-view"></div>
+      </div>
+      <div class="rightbar-section">
+        <h3>解析</h3>
+        <div id="explanation" class="explanation"></div>
+      </div>
+      <div class="rightbar-section notes-section">
+        <h3>我的笔记</h3>
+        <textarea id="notes" placeholder="记录你的心得、易错点…"></textarea>
+        <div id="notes-saved" class="notes-saved"></div>
+      </div>
+    </aside>
+  </main>
+
+  <div id="loading-mask" class="loading-mask hidden">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <div id="loading-text">正在加载…</div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
