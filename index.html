@@ -71,6 +71,13 @@
           <textarea id="editor-sql"></textarea>
           <textarea id="editor-pandas" style="display:none"></textarea>
         </div>
+        <div id="solution-view" class="hidden">
+          <div class="solution-header">
+            <span>参考答案（<span id="solution-lang"></span>）</span>
+            <button id="btn-solution-close" class="btn btn-ghost" title="收起答案">×</button>
+          </div>
+          <pre><code id="solution-code"></code></pre>
+        </div>
       </div>
 
       <div id="result-panel">

@@ -45,6 +45,7 @@ function init() {
   );
   $('#btn-run').addEventListener('click', onRun);
   $('#btn-solution').addEventListener('click', onShowSolution);
+  $('#btn-solution-close').addEventListener('click', () => $('#solution-view').classList.add('hidden'));
   $('#btn-reset').addEventListener('click', onResetCode);
   $('#btn-star').addEventListener('click', onToggleStar);
   $('#search').addEventListener('input', renderList);
@@ -158,6 +159,7 @@ function selectExercise(id) {
 
   $('#notes').value = store.getNote(id);
   $('#judge-banner').className = 'judge-banner hidden';
+  $('#solution-view').classList.add('hidden');
   $('#actual-table').innerHTML = '<div class="table-empty">点击「运行」查看结果</div>';
   $('#expected-table').innerHTML = '<div class="table-empty">运行后显示期望结果</div>';
 
@@ -179,6 +181,8 @@ function switchTab(tab) {
   cmSql.getWrapperElement().style.display = tab === 'sql' ? '' : 'none';
   cmPandas.getWrapperElement().style.display = tab === 'pandas' ? '' : 'none';
   (tab === 'sql' ? cmSql : cmPandas).refresh();
+  // 答案块展开时，切换 Tab 同步刷新为对应语言的参考答案
+  if (!$('#solution-view').classList.contains('hidden')) renderSolution();
 }
 
 function saveDraft() {
@@ -285,21 +289,29 @@ function escapeHtml(s) {
 }
 
 /* ---------------- 答案 / 重置 / 收藏 ---------------- */
-function onShowSolution() {
+function renderSolution() {
   const ex = EXERCISES.find((e) => e.id === currentId);
   const target = activeTab === 'sql' ? ex.solutionSql : ex.solutionPandas;
-  const cm = activeTab === 'sql' ? cmSql : cmPandas;
-  if (cm.getValue().trim() && cm.getValue().trim() !== target.trim()) {
-    if (!confirm('用参考答案覆盖当前代码？')) return;
+  $('#solution-lang').textContent = activeTab === 'sql' ? 'SQL' : 'pandas';
+  $('#solution-code').textContent = target;
+}
+
+function onShowSolution() {
+  const view = $('#solution-view');
+  if (view.classList.contains('hidden')) {
+    renderSolution();
+    view.classList.remove('hidden');
+  } else {
+    view.classList.add('hidden');
   }
-  cm.setValue(target);
 }
 
 function onResetCode() {
   const ex = EXERCISES.find((e) => e.id === currentId);
-  if (!confirm('重置为初始代码？')) return;
-  cmSql.setValue(ex.starterSql);
-  cmPandas.setValue(ex.starterPandas);
+  const isSql = activeTab === 'sql';
+  if (!confirm(`重置${isSql ? ' SQL ' : ' pandas '}为初始代码？`)) return;
+  if (isSql) cmSql.setValue(ex.starterSql);
+  else cmPandas.setValue(ex.starterPandas);
 }
 
 function onToggleStar() {
