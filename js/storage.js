@@ -23,8 +23,16 @@ function load() {
 
 let state = load();
 
+const listeners = [];
+
+// 订阅持久化变更（用于 WebDAV 自动上传等）
+export function onChange(fn) {
+  listeners.push(fn);
+}
+
 function save() {
   localStorage.setItem(KEY, JSON.stringify(state));
+  for (const fn of listeners) fn();
 }
 
 export function getProgress(id) {

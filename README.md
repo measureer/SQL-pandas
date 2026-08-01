@@ -10,6 +10,7 @@
 - **查看答案**：参考答案在编辑器下方独立展示，不覆盖你的代码
 - **分语言重置**：在 SQL 标签页点"重置代码"只重置 SQL，pandas 代码不受影响（反之亦然）
 - **进度持久化**：代码草稿、通过状态、收藏、笔记均保存在浏览器 localStorage，支持导出 / 导入 JSON
+- **WebDAV 云端同步**：可把进度与笔记备份到 WebDAV 服务器（顶栏「WebDAV」按钮），支持手动上传 / 恢复与本地保存后自动上传
 - **内置数据集**：employees、departments、orders 三张示例表，右栏可查看 Schema
 
 ## 快速开始
@@ -37,7 +38,8 @@ Windows 用户也可以直接双击 `启动网站.bat`（macOS / Linux 用 `启�
 │   ├── pandas-runner.js# Pyodide 执行封装
 │   ├── compare.js      # 结果对比
 │   ├── datasets.js     # 数据集定义与建表代码生成
-│   └── storage.js      # localStorage 进度 / 笔记
+│   ├── storage.js      # localStorage 进度 / 笔记
+│   └── webdav.js       # WebDAV 云端同步
 ├── data/exercises.js   # 题库（由 data/exercises.json 生成）
 ├── tools/              # 题库构建、数据集导出、校验脚本
 └── vendor/pyodide/     # 本地 Pyodide（离线可用）
@@ -51,6 +53,14 @@ Windows 用户也可以直接双击 `启动网站.bat`（macOS / Linux 用 `启�
 python tools/build_exercises.py   # 生成 data/exercises.js
 python tools/verify.py            # 校验答案与期望结果一致
 ```
+
+## WebDAV 同步说明
+
+浏览器直连 WebDAV 要求服务端返回 CORS 头（`Access-Control-Allow-Origin` 等），并放行
+`PROPFIND`、`PUT`、`GET` 方法与 `Authorization`、`Depth`、`Content-Type` 请求头。
+坚果云等常见服务不支持浏览器跨域，可用 Alist / Cloudreve 自建网盘，或用 Nginx 反代为
+WebDAV 服务附加 CORS 头。服务器地址应填到目录级（如 `https://example.com/dav/backup/`），
+备份文件名默认 `sql-pandas-progress.json`。密码仅保存在本机浏览器 localStorage。
 
 ## 技术栈
 

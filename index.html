@@ -17,6 +17,7 @@
     <div class="brand">SQL × Pandas <span class="brand-sub">对照练习</span></div>
     <div id="dashboard" class="dashboard"></div>
     <div class="topbar-actions">
+      <button id="btn-webdav" class="btn btn-ghost" title="WebDAV 云端同步进度与笔记">WebDAV</button>
       <button id="btn-export" class="btn btn-ghost" title="导出进度与笔记为 JSON">导出</button>
       <button id="btn-import" class="btn btn-ghost" title="从 JSON 恢复进度与笔记">导入</button>
       <input type="file" id="import-file" accept=".json" hidden>
@@ -80,16 +81,29 @@
         </div>
       </div>
 
-      <div id="result-panel">
-        <div id="judge-banner" class="judge-banner hidden"></div>
-        <div id="result-tables" class="result-tables">
+      <div id="result-panel-sql" class="result-panel">
+        <div id="judge-banner-sql" class="judge-banner hidden"></div>
+        <div class="result-tables">
           <div class="result-box">
             <h3>你的结果</h3>
-            <div id="actual-table" class="table-wrap"></div>
+            <div id="actual-table-sql" class="table-wrap"></div>
           </div>
           <div class="result-box">
             <h3>期望结果</h3>
-            <div id="expected-table" class="table-wrap"></div>
+            <div id="expected-table-sql" class="table-wrap"></div>
+          </div>
+        </div>
+      </div>
+      <div id="result-panel-pandas" class="result-panel hidden">
+        <div id="judge-banner-pandas" class="judge-banner hidden"></div>
+        <div class="result-tables">
+          <div class="result-box">
+            <h3>你的结果</h3>
+            <div id="actual-table-pandas" class="table-wrap"></div>
+          </div>
+          <div class="result-box">
+            <h3>期望结果</h3>
+            <div id="expected-table-pandas" class="table-wrap"></div>
           </div>
         </div>
       </div>
@@ -112,6 +126,45 @@
       </div>
     </aside>
   </main>
+
+  <div id="webdav-modal" class="modal-mask hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span>WebDAV 云端同步</span>
+        <button id="webdav-close" class="btn btn-ghost" title="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <label>服务器地址
+          <input type="text" id="webdav-url" placeholder="https://example.com/dav/">
+        </label>
+        <label>用户名
+          <input type="text" id="webdav-user" autocomplete="username">
+        </label>
+        <label>密码 / 应用密码
+          <input type="password" id="webdav-pass" autocomplete="current-password">
+        </label>
+        <label>备份文件名
+          <input type="text" id="webdav-filename" placeholder="sql-pandas-progress.json">
+        </label>
+        <label class="webdav-auto">
+          <input type="checkbox" id="webdav-auto-upload">
+          本地保存后自动上传（2 秒防抖）
+        </label>
+        <div class="webdav-actions">
+          <button id="webdav-save" class="btn">保存设置</button>
+          <button id="webdav-test" class="btn">测试连接</button>
+          <button id="webdav-upload" class="btn btn-primary">上传到云端</button>
+          <button id="webdav-download" class="btn">从云端恢复</button>
+        </div>
+        <div id="webdav-status" class="webdav-status"></div>
+        <div class="webdav-hint">
+          注意：浏览器直连要求 WebDAV 服务端允许跨域（CORS）并放行 PROPFIND / PUT 方法与
+          Authorization、Depth 请求头；坚果云等不支持浏览器跨域，可用 Alist / Cloudreve /
+          Nginx 反代中转。密码仅保存在本机浏览器 localStorage。
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="loading-mask" class="loading-mask hidden">
     <div class="loading-box">

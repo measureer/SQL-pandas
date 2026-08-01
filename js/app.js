@@ -5,6 +5,7 @@ import { runSql } from './sql-runner.js';
 import { runPandas } from './pandas-runner.js';
 import { compareResults } from './compare.js';
 import * as store from './storage.js';
+import * as webdav from './webdav.js';
 
 const LEVELS = [
   { key: 'beginner', label: '入门 Beginner' },
@@ -21,11 +22,23 @@ let cmSql = null;
 let cmPandas = null;
 // 期望结果缓存：`${id}:${engine}` -> {columns, rows}
 const expectedCache = new Map();
+// 每个语言 Tab 独立的结果区元素：{ sql: {panel,banner,actual,expected}, pandas: {...} }
+const resultEls = {};
+
+// SQLite 方言的类型 + 常用函数 + 窗口子句词（CodeMirror builtin，着色为 .cm-builtin）
+// 默认 text/x-sql 的关键字表不含这些词，导致函数与专有词无颜色
+const SQL_BUILTIN = (
+  'bool boolean bit blob decimal double float long text clob bigint int int2 int8 integer char varchar date datetime year unsigned signed numeric real ' +
+  'sum avg min max count total round abs length upper lower replace substr instr trim ltrim rtrim coalesce ifnull nullif group_concat ' +
+  'strftime julianday printf typeof hex quote random changes last_insert_rowid ' +
+  'row_number rank dense_rank lag lead first_value last_value nth_value ntile ' +
+  'over partition filter within'
+).split(' ').reduce((m, w) => ((m[w] = true), m), {});
 
 /* ---------------- 初始化 ---------------- */
 function init() {
   cmSql = CodeMirror.fromTextArea($('#editor-sql'), {
-    mode: 'text/x-sql',
+    mode: { name: 'text/x-sqlite', builtin: SQL_BUILTIN },
     theme: 'material-darker',
     lineNumbers: true,
     indentWithTabs: false,
@@ -39,6 +52,15 @@ function init() {
 
   cmSql.on('change', () => saveDraft());
   cmPandas.on('change', () => saveDraft());
+
+  for (const tab of ['sql', 'pandas']) {
+    resultEls[tab] = {
+      panel: $(`#result-panel-${tab}`),
+      banner: $(`#judge-banner-${tab}`),
+      actual: $(`#actual-table-${tab}`),
+      expected: $(`#expected-table-${tab}`),
+    };
+  }
 
   document.querySelectorAll('.tab').forEach((t) =>
     t.addEventListener('click', () => switchTab(t.dataset.tab))
@@ -54,6 +76,7 @@ function init() {
   $('#btn-export').addEventListener('click', onExport);
   $('#btn-import').addEventListener('click', () => $('#import-file').click());
   $('#import-file').addEventListener('change', onImport);
+  initWebdav();
 
   let noteTimer = null;
   const saveNoteNow = (id, text) => {
@@ -158,10 +181,13 @@ function selectExercise(id) {
   updateTabDots();
 
   $('#notes').value = store.getNote(id);
-  $('#judge-banner').className = 'judge-banner hidden';
   $('#solution-view').classList.add('hidden');
-  $('#actual-table').innerHTML = '<div class="table-empty">点击「运行」查看结果</div>';
-  $('#expected-table').innerHTML = '<div class="table-empty">运行后显示期望结果</div>';
+  for (const tab of ['sql', 'pandas']) {
+    const r = resultEls[tab];
+    r.banner.className = 'judge-banner hidden';
+    r.actual.innerHTML = '<div class="table-empty">点击「运行」查看结果</div>';
+    r.expected.innerHTML = '<div class="table-empty">运行后显示期望结果</div>';
+  }
 
   document.querySelectorAll('.exercise-item').forEach((el) => el.classList.remove('active'));
   renderList();
@@ -181,6 +207,9 @@ function switchTab(tab) {
   cmSql.getWrapperElement().style.display = tab === 'sql' ? '' : 'none';
   cmPandas.getWrapperElement().style.display = tab === 'pandas' ? '' : 'none';
   (tab === 'sql' ? cmSql : cmPandas).refresh();
+  // 结果区随 Tab 切换：两个语言各自保留自己的结果与判题横幅
+  resultEls.sql.panel.classList.toggle('hidden', tab !== 'sql');
+  resultEls.pandas.panel.classList.toggle('hidden', tab !== 'pandas');
   // 答案块展开时，切换 Tab 同步刷新为对应语言的参考答案
   if (!$('#solution-view').classList.contains('hidden')) renderSolution();
 }
@@ -216,10 +245,11 @@ async function onRun() {
   const ex = EXERCISES.find((e) => e.id === currentId);
   const btn = $('#btn-run');
   btn.disabled = true;
-  const banner = $('#judge-banner');
+  const engine = activeTab;
+  const result = resultEls[engine];
+  const banner = result.banner;
   banner.className = 'judge-banner hidden';
   try {
-    const engine = activeTab;
     const code = engine === 'sql' ? cmSql.getValue() : cmPandas.getValue();
     const runner = engine === 'sql' ? runSql : runPandas;
 
@@ -228,14 +258,14 @@ async function onRun() {
       getExpected(ex, engine),
     ]);
 
-    renderTable($('#actual-table'), actual);
-    renderTable($('#expected-table'), expected);
+    renderTable(result.actual, actual);
+    renderTable(result.expected, expected);
 
     const verdict = compareResults(actual, expected);
     banner.className = `judge-banner ${verdict.pass ? 'pass' : 'fail'}`;
     banner.textContent = verdict.pass ? `✓ ${verdict.message}` : `✗ ${verdict.message}`;
     if (verdict.diffs && verdict.diffs.size > 0) {
-      highlightDiffs($('#actual-table'), verdict.diffs);
+      highlightDiffs(result.actual, verdict.diffs);
     }
 
     const p = store.getProgress(currentId) || {};
@@ -250,7 +280,7 @@ async function onRun() {
   } catch (err) {
     banner.className = 'judge-banner error';
     banner.textContent = `运行出错：\n${err.message}`;
-    $('#actual-table').innerHTML = '<div class="table-empty">—</div>';
+    result.actual.innerHTML = '<div class="table-empty">—</div>';
   } finally {
     setStatus('');
     btn.disabled = false;
@@ -367,6 +397,97 @@ function onImport(e) {
   };
   reader.readAsText(file);
   e.target.value = '';
+}
+
+/* ---------------- WebDAV 同步 ---------------- */
+function setWebdavStatus(text, isError = false) {
+  const el = $('#webdav-status');
+  el.textContent = text || '';
+  el.classList.toggle('error', isError);
+}
+
+function readWebdavForm() {
+  return {
+    url: $('#webdav-url').value,
+    username: $('#webdav-user').value,
+    password: $('#webdav-pass').value,
+    filename: $('#webdav-filename').value,
+    autoUpload: $('#webdav-auto-upload').checked,
+  };
+}
+
+function fillWebdavForm(cfg) {
+  $('#webdav-url').value = cfg.url;
+  $('#webdav-user').value = cfg.username;
+  $('#webdav-pass').value = cfg.password;
+  $('#webdav-filename').value = cfg.filename;
+  $('#webdav-auto-upload').checked = cfg.autoUpload;
+}
+
+async function webdavAction(action, okText) {
+  const cfg = readWebdavForm();
+  webdav.saveConfig(cfg);
+  if (!webdav.isConfigured(cfg)) {
+    setWebdavStatus('请先填写服务器地址', true);
+    return;
+  }
+  setWebdavStatus('进行中…');
+  try {
+    await action(cfg);
+    setWebdavStatus(`${okText}（${new Date().toLocaleTimeString()}）`);
+  } catch (err) {
+    setWebdavStatus(err.message, true);
+  }
+}
+
+function applyImportedState() {
+  renderList();
+  renderDashboard();
+  selectExercise(currentId);
+}
+
+function initWebdav() {
+  fillWebdavForm(webdav.getConfig());
+
+  $('#btn-webdav').addEventListener('click', () => $('#webdav-modal').classList.remove('hidden'));
+  $('#webdav-close').addEventListener('click', () => $('#webdav-modal').classList.add('hidden'));
+  $('#webdav-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'webdav-modal') $('#webdav-modal').classList.add('hidden');
+  });
+
+  $('#webdav-save').addEventListener('click', () => {
+    webdav.saveConfig(readWebdavForm());
+    setWebdavStatus('设置已保存');
+  });
+  $('#webdav-test').addEventListener('click', () =>
+    webdavAction((cfg) => webdav.testConnection(cfg), '连接成功')
+  );
+  $('#webdav-upload').addEventListener('click', () =>
+    webdavAction((cfg) => webdav.upload(cfg, store.exportJSON()), '上传成功')
+  );
+  $('#webdav-download').addEventListener('click', () =>
+    webdavAction(async (cfg) => {
+      const text = await webdav.download(cfg);
+      store.importJSON(text);
+      applyImportedState();
+    }, '已从云端恢复')
+  );
+
+  // 自动上传：本地任何持久化变更后 2 秒防抖推送
+  let autoTimer = null;
+  store.onChange(() => {
+    const cfg = webdav.getConfig();
+    if (!cfg.autoUpload || !webdav.isConfigured(cfg)) return;
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(async () => {
+      try {
+        await webdav.upload(cfg, store.exportJSON());
+        setWebdavStatus(`已自动上传（${new Date().toLocaleTimeString()}）`);
+      } catch (err) {
+        setWebdavStatus(`自动上传失败：${err.message}`, true);
+      }
+    }, 2000);
+  });
 }
 
 /* ---------------- Schema 视图 ---------------- */
