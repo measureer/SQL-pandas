@@ -137,6 +137,8 @@ body {
   padding: 14px 16px;
   gap: 12px;
 }
+/* 子块不压缩，超出时中间区域用滚轮上下滚动 */
+#workspace > * { flex: 0 0 auto; }
 
 .exercise-title-row { display: flex; align-items: center; gap: 10px; }
 .exercise-title-row h2 { font-size: 18px; }
@@ -179,6 +181,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+  flex: 0 0 auto;
 }
 
 .tabs {
@@ -188,6 +191,7 @@ body {
   padding: 6px 10px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-panel-2);
+  border-radius: 8px 8px 0 0;
 }
 .tabs-spacer { flex: 1; }
 
@@ -213,7 +217,12 @@ body {
   font-family: Consolas, "Courier New", monospace;
 }
 
-/* ---------- 参考答案展示块 ---------- */
+/* ---------- 选中高亮（主题默认选中色与背景太接近） ---------- */
+.CodeMirror-selected { background: rgba(255, 255, 255, 0.12) !important; }
+.CodeMirror-focused .CodeMirror-selected { background: rgba(79, 140, 255, 0.4) !important; }
+::selection { background: rgba(79, 140, 255, 0.45); color: #fff; }
+
+/* ---------- 参考答案展示块（在编辑器下方，结果区随之往下挪） ---------- */
 #solution-view { border-top: 1px solid var(--border); }
 .solution-header {
   display: flex;
@@ -255,6 +264,8 @@ body {
   padding: 10px 14px;
   border-radius: 8px;
   font-weight: 600;
+  max-height: 160px;
+  overflow-y: auto;
 }
 .judge-banner.pass { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); }
 .judge-banner.fail { background: var(--fail-bg); color: var(--fail); border: 1px solid var(--fail); }
