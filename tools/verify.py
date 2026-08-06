@@ -1,4 +1,4 @@
-# 校验 data/exercises.json 中 30 道题的参考答案：
+# 校验 data/exercises.json 中 50 道题的参考答案：
 #   1. 结构完整性（必填字段、id/level/topics 合法、起始代码非空等）
 #   2. solutionSql 能在 SQLite 内存库执行
 #   3. solutionPandas 能在 pandas 执行且产出 DataFrame 变量 result
@@ -22,9 +22,9 @@ REQUIRED_FIELDS = [
     "starterSql", "starterPandas", "solutionSql", "solutionPandas", "explanation",
 ]
 EXPECTED_IDS = (
-    [f"B{i:02d}" for i in range(1, 11)]
-    + [f"I{i:02d}" for i in range(1, 11)]
-    + [f"A{i:02d}" for i in range(1, 11)]
+    [f"B{i:02d}" for i in range(1, 16)]
+    + [f"I{i:02d}" for i in range(1, 16)]
+    + [f"A{i:02d}" for i in range(1, 21)]
 )
 LEVEL_OF = {"B": "beginner", "I": "intermediate", "A": "advanced"}
 
@@ -182,8 +182,8 @@ def main():
 
     # 全局结构
     ids = [e.get("id") for e in exercises]
-    if len(exercises) != 30:
-        print(f"FAIL [global] 题目数量应为 30，实际 {len(exercises)}")
+    if len(exercises) != 50:
+        print(f"FAIL [global] 题目数量应为 50，实际 {len(exercises)}")
         failures += 1
     if len(set(ids)) != len(ids):
         print("FAIL [global] 存在重复 id")

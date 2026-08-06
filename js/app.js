@@ -170,7 +170,10 @@ function selectExercise(id) {
   $('#exercise-meta').innerHTML = `
     <span class="badge level-${ex.level}">${LEVEL_SHORT[ex.level]}</span>
     ${ex.topics.map((t) => `<span class="badge">${t}</span>`).join('')}`;
-  $('#exercise-desc').innerHTML = ex.description;
+  $('#exercise-desc').innerHTML = ex.description
+    + (ex.pandasTips
+      ? `<details class="pandas-tips"><summary>pandas 函数用法</summary>${ex.pandasTips}</details>`
+      : '');
   $('#explanation').innerHTML = ex.explanation;
 
   $('#btn-star').textContent = p.starred ? '★' : '☆';
